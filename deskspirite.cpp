@@ -7,8 +7,9 @@ DeskSpirite::DeskSpirite(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    // Fix the size of window to prevent misconduct
-    this->setFixedSize(100, 160);
+
+    // Fix the size of window to minimize the blank area of the window
+    this->setFixedSize(WIN_SIZE_WIDTH, WIN_SIZE_HEIGHT);
 
     // Move the spirite to the center of the Screen
     QScreen *screen=QGuiApplication::primaryScreen ();
@@ -17,9 +18,15 @@ DeskSpirite::DeskSpirite(QWidget *parent) :
     int screen_height = mm.height();
     this->move(QPoint(screen_width/2, screen_height/2));
 
-    updateId = startTimer(60);
+    updateId = startTimer(FPS_FREQ);
     currentFrame = 0;
-    imgPrefix = "/home/davlee/QtCode/try/Madoka/idle/000";
+    idleCount = 0;
+    stateNum = State::idle;
+    imgPrefixs.push_back("/home/davlee/QtCode/try/Madoka/paused/000");
+    imgPrefixs.push_back("/home/davlee/QtCode/try/Madoka/idle/000");
+    imgPrefixs.push_back("/home/davlee/QtCode/try/Madoka/drag/000");
+    imgPrefixs.push_back("/home/davlee/QtCode/try/Madoka/jump/000");
+    imgPrefixs.push_back("/home/davlee/QtCode/try/Madoka/attack/000");
     imgSuffix = ".png";
 
     // Close the menu bar and set the background transparent.
@@ -37,7 +44,29 @@ DeskSpirite::~DeskSpirite()
 void DeskSpirite::timerEvent(QTimerEvent *event)
 {
     if (event->timerId() == updateId) {
+        if(stateNum==State::idle || stateNum==State::paused){
+            // If a iteratioin of frames is completed, increment
+            if(currentFrame==frameCount[stateNum]-1) {idleCount++;}
+            // Change state between idle and paused
+            if(idleCount == STAT_CHG_COUNT_IDL_PAUSED){
+                if(stateNum==State::paused) {stateNum=State::idle;}
+                else if(stateNum==State::idle)  {stateNum=State::paused;}
+                currentFrame = 0;
+                idleCount = 0;
+            }
+        }
+        else if(stateNum==State::attack){
+            if(currentFrame==frameCount[stateNum]-1){
+                stateNum = State::idle;
+                currentFrame = 0;
+                idleCount = 0;
+            }
+        }
+
         update();// use paintEvent to update
+
+        currentFrame += 1;
+        if(currentFrame>=frameCount[stateNum]){currentFrame = 0;}
     }
 }
 
@@ -45,20 +74,26 @@ void DeskSpirite::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event);
 
-    imgName = imgPrefix + std::to_string(currentFrame) + imgSuffix;
+    imgName = imgPrefixs[stateNum] + std::to_string(currentFrame) + imgSuffix;
     image.load(QString::fromStdString(imgName));
-    currentFrame += 1;
 
-    if(currentFrame>=8){currentFrame = 0;}
-
+    // Different action has different pic size: paused, idle -> 156 × 96, run, attack etc. -> 128 × 128
     QPainter painter(this);
-    painter.drawPixmap(10,10,106,166,image);
+    if(stateNum==State::paused || stateNum==State::idle){
+          painter.drawPixmap(ORIGIN_LEFT_UP[0],ORIGIN_LEFT_UP[1],
+                             ORIGIN_RIGHT_DOWN_1[0],ORIGIN_RIGHT_DOWN_1[1],image);
+    }else{
+        painter.drawPixmap(ORIGIN_LEFT_UP[0],ORIGIN_LEFT_UP[1],
+                           ORIGIN_RIGHT_DOWN_2[0],ORIGIN_RIGHT_DOWN_2[1],image);
+    }
+
 }
 
 void DeskSpirite::mousePressEvent(QMouseEvent *event)
 {
     if(event->button() == Qt::LeftButton){
         mousePress = true;
+        stateNum = State::draging;
     }
     movePoint = event->globalPos() - pos();
     event->accept();
@@ -67,6 +102,7 @@ void DeskSpirite::mousePressEvent(QMouseEvent *event)
 void DeskSpirite::mouseReleaseEvent(QMouseEvent *event)
 {
     Q_UNUSED(event);
+    stateNum = State::idle;
     mousePress = false;
     event->accept();
 }
@@ -87,21 +123,17 @@ void DeskSpirite::on_DeskSpirite_customContextMenuRequested(const QPoint &pos)
     QMenu *pMenu = new QMenu(this);
     QAction *pClose = new QAction(tr("Close spirite"), this);
     QAction *pAttack = new QAction(tr("Attack"), this);
-    QAction *pJump = new QAction(tr("Jump"), this);
 
-    pClose->setData(1);
-    pAttack->setData(2);
-    pJump->setData(3);
+    pAttack->setData(1);
+    pClose->setData(2);
 
     //Add the action onto the menu
-    pMenu->addAction(pClose);
     pMenu->addAction(pAttack);
-    pMenu->addAction(pJump);
+    pMenu->addAction(pClose);
 
     //Connect the signal and slot
     connect(pClose, &QAction::triggered, this, &DeskSpirite::onTaskBoxContextMenuEvent);
     connect(pAttack, &QAction::triggered, this, &DeskSpirite::onTaskBoxContextMenuEvent);
-    connect(pJump, &QAction::triggered, this, &DeskSpirite::onTaskBoxContextMenuEvent);
 
     //Display where the mouse clicked
     pMenu->exec(cursor().pos());
@@ -120,11 +152,11 @@ void DeskSpirite::onTaskBoxContextMenuEvent()
     switch (iType)
     {
     case 1:
-        QApplication::quit();
+        stateNum = State::attack;
+        currentFrame = 0;
         break;
     case 2:
-        break;
-    case 3:
+        QApplication::quit();
         break;
     default:
         break;
