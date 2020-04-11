@@ -41,6 +41,7 @@ private slots:
 private:
     // Some frequent changeparameters:
     int FPS_FREQ = 80;
+    int SCREEN_WIDTH;
     int WIN_SIZE_WIDTH = 160;
     int WIN_SIZE_HEIGHT = 160;
     int STAT_CHG_COUNT_IDL_PAUSED = 5;
@@ -50,15 +51,21 @@ private:
     int ORIGIN_RIGHT_DOWN_2[2] = {138, 138};
 
     // The state of deskspirite
-    enum State{paused, idle, draging, drop, attack};
-    int frameCount[5] = {10, 8, 1, 9, 9};    // Number of frames corresponding to the enum index
+    enum State{paused, idle, draging, drop, attack, runLeft, runRight};
+    int frameCount[7] = {10, 8, 1, 9, 9, 8, 8};    // Number of frames corresponding to the enum index
     int stateNum;
     int idleCount; //Used to transfer between idle and paused state (Always being idle is too annoying...)
 
     bool mousePress;
     QPoint movePoint;
+
+    float curScreenPos[2] = {0,0};
+    int velocity = 0;
+    int VELOCITY_INTERVAL = 35;
+
     int updateId;
     int idleTimerId;
+
     int currentFrame;
     string imgCurPrefix;
     vector<string> imgPrefixs;
@@ -74,6 +81,8 @@ private:
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
+    void keyPressEvent(QKeyEvent *event);
+    void keyReleaseEvent(QKeyEvent *event);
 
     void onTaskBoxContextMenuEvent();
     void timerEvent(QTimerEvent *event);
