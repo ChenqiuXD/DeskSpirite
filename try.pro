@@ -18,4 +18,5 @@ SOURCES += main.cpp\
 
 HEADERS  += deskspirite.h
 
-FORMS    += deskspirite.ui
+FORMS    += deskspirite.ui \
+    mainwindow.ui

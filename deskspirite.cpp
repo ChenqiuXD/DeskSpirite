@@ -1,5 +1,6 @@
 #include "deskspirite.h"
 #include "ui_deskspirite.h"
+#include "ui_mainwindow.h"
 
 DeskSpirite::DeskSpirite(QWidget *parent) :
     QWidget(parent),
@@ -7,9 +8,9 @@ DeskSpirite::DeskSpirite(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    //TODO:
     // Set the windows icon. BUT UNLUCKLY, IT DOES NOT WORK
 
-    // Fix the size of window to minimize the blank area of the window
     this->setFixedSize(WIN_SIZE_WIDTH, WIN_SIZE_HEIGHT);
 
     // Move the spirite to the center of the Screen
@@ -18,8 +19,8 @@ DeskSpirite::DeskSpirite(QWidget *parent) :
     int screen_width = mm.width();
     int screen_height = mm.height();
     this->SCREEN_WIDTH = screen_width;
-    this->curScreenPos[0] = screen_width*3/4;
-    this->curScreenPos[1] = screen_height*2/3;
+    this->curScreenPos[0] = screen_width*2/3;
+    this->curScreenPos[1] = screen_height*7/12;
 
     updateId = startTimer(FPS_FREQ);
     currentFrame = 0;
@@ -32,13 +33,15 @@ DeskSpirite::DeskSpirite(QWidget *parent) :
     imgPrefixs.push_back("/home/davlee/QtCode/try/Madoka/attack/000");
     imgPrefixs.push_back("/home/davlee/QtCode/try/Madoka/runLeft/000");
     imgPrefixs.push_back("/home/davlee/QtCode/try/Madoka/runRight/000");
+    imgPrefixs.push_back("/home/davlee/QtCode/try/Madoka/jumpLeft/000");
+    imgPrefixs.push_back("/home/davlee/QtCode/try/Madoka/jumpRight/000");
     imgSuffix = ".png";
 
     // Close the menu bar and set the background transparent.
-//    this->setWindowFlags(Qt::FramelessWindowHint \
-//                         | Qt::WindowStaysOnTopHint\
-//                         |Qt::Tool);
-//    this->setAttribute(Qt::WA_TranslucentBackground, true);
+    this->setWindowFlags(Qt::FramelessWindowHint \
+                         | Qt::WindowStaysOnTopHint\
+                         |Qt::Tool);
+    this->setAttribute(Qt::WA_TranslucentBackground, true);
 }
 
 DeskSpirite::~DeskSpirite()
@@ -50,23 +53,34 @@ void DeskSpirite::timerEvent(QTimerEvent *event)
 {
     // The dragging part position update is in the mouseMove function
     // The two position update blobs are seperated because once integrated, the draging would be slowed.
-    if(this->stateNum != State::draging){
-        // First move the window
-        this->move(QPoint(int(this->curScreenPos[0]), int(this->curScreenPos[1])));
-        this->curScreenPos[0] += this->velocity;
+    if(stateNum != State::draging){
+        // Move the window horizontally
+        move(QPoint(int(curScreenPos[0]), int(curScreenPos[1])));
+        if(curScreenPos[0] + velocity_hor <= this->SCREEN_WIDTH-ORIGIN_RIGHT_DOWN_2[0]/2 &&
+           curScreenPos[0] + velocity_hor > 0){
+            curScreenPos[0] += velocity_hor;
+        }
 
-        int right_border = this->SCREEN_WIDTH-this->ORIGIN_RIGHT_DOWN_2[0]+this->ORIGIN_LEFT_UP[0];
-        int left_border = this->ORIGIN_LEFT_UP[0];
-        if(this->curScreenPos[0]>=right_border){
-            this->curScreenPos[0] = right_border;
-        }else if(this->curScreenPos[0]<=left_border){
-            this->curScreenPos[0] = left_border;
+        // Move the window vertically
+        if(stateNum == State::jumpLeft || stateNum == State::jumpRight){
+            move(QPoint(int(curScreenPos[0]), int(curScreenPos[1])));
+            curScreenPos[1] += velocity_ver;
+            velocity_ver += VELOCITY_INTERVAL_VER;
+            if(velocity_ver == +(INIT_VER_COEFFICIENT+1) * VELOCITY_INTERVAL_VER){
+                if(this->isLeftPressed){
+                    stateNum = State::runLeft;
+                }else if(this->isRightPressed){
+                    stateNum = State::runRight;
+                }else{
+                    stateNum = State::idle;
+                }
+                velocity_ver = 0;
+            }
         }
     }
 
     if (event->timerId() == updateId) {
         if(stateNum==State::idle || stateNum==State::paused){
-            // If a iteratioin of frames is completed, increment
             if(currentFrame==frameCount[stateNum]-1) {idleCount++;}
             // Change state between idle and paused
             if(idleCount == STAT_CHG_COUNT_IDL_PAUSED){
@@ -102,7 +116,7 @@ void DeskSpirite::paintEvent(QPaintEvent* event)
     // Thus the program has to classfy the status and then draw the spirite
     QPainter painter(this);
     if(stateNum==State::paused || stateNum==State::idle){
-          painter.drawPixmap(ORIGIN_LEFT_UP[0],ORIGIN_LEFT_UP[1],
+        painter.drawPixmap(ORIGIN_LEFT_UP[0],ORIGIN_LEFT_UP[1],
                              ORIGIN_RIGHT_DOWN_1[0],ORIGIN_RIGHT_DOWN_1[1],image);
     }else{
         painter.drawPixmap(ORIGIN_LEFT_UP[0],ORIGIN_LEFT_UP[1],
@@ -133,30 +147,76 @@ void DeskSpirite::mouseMoveEvent(QMouseEvent *event)
 {
     if(mousePress){
         QPoint movePos = event->globalPos();
-        this->curScreenPos[0] = movePos.x()-movePoint.x();
-        this->curScreenPos[1] = movePos.y()-movePoint.y();
+        curScreenPos[0] = movePos.x()-movePoint.x();
+        curScreenPos[1] = movePos.y()-movePoint.y();
         move(movePos-movePoint);
         event->accept();
     }
 }
 
+void DeskSpirite::updateKeyState(QKeyEvent *event)
+{
+    if(event->type() == QEvent::KeyPress){
+        if(event->key() == Qt::Key_Up){
+            if(stateNum == State::jumpLeft || stateNum == State::jumpRight){
+                return;
+            }else if(stateNum == State::runLeft){
+                stateNum = State::jumpLeft;
+                velocity_ver = -VELOCITY_INTERVAL_VER * INIT_VER_COEFFICIENT;
+            }else if(stateNum == State::runRight){
+                stateNum = State::jumpRight;
+                velocity_ver = -VELOCITY_INTERVAL_VER * INIT_VER_COEFFICIENT;
+            }else{
+                stateNum = State::jumpRight;
+                velocity_ver = -VELOCITY_INTERVAL_VER * INIT_VER_COEFFICIENT;
+            }
+        }else if(event->key() == Qt::Key_Left){
+            if(stateNum != State::jumpLeft && stateNum != State::jumpRight){
+                stateNum = State::runLeft;
+                velocity_hor = -VELOCITY_INTERVAL_HOR;
+            }else{
+                velocity_hor = -VELOCITY_INTERVAL_HOR;
+            }
+            if(!this->isRightPressed){this->isLeftPressed = true;}
+        }else if(event->key() == Qt::Key_Right){
+            if(stateNum != State::jumpLeft && stateNum != State::jumpRight){
+                stateNum = State::runRight;
+                velocity_hor = +VELOCITY_INTERVAL_HOR;
+            }else{
+                velocity_hor = +VELOCITY_INTERVAL_HOR;
+            }
+            if(!this->isLeftPressed){this->isRightPressed = true;}
+        }
+    }else if(event->type() == QEvent::KeyRelease){
+        if(event->key() == Qt::Key_Left){
+            if(stateNum == State::runLeft){
+                stateNum = State::idle;
+            }
+            velocity_hor = 0;
+            this->isLeftPressed = false;
+        }else if(event->key() == Qt::Key_Right){
+            if(stateNum == State::runRight){
+                stateNum = State::idle;
+            }
+            velocity_hor = 0;
+            this->isRightPressed = false;
+        }
+    }
+
+    currentFrame = 0;
+
+}
+
 void DeskSpirite::keyPressEvent(QKeyEvent *event)
 {
-    if(event->key() == Qt::Key_Left){
-        this->stateNum = State::runLeft;
-        this->velocity = -this->VELOCITY_INTERVAL;
-    }else if(event->key() == Qt::Key_Right){
-        this->stateNum = State::runRight;
-        this->velocity = +this->VELOCITY_INTERVAL;
-    }
+    if(event->isAutoRepeat()){return;}
+    this->updateKeyState(event);
 }
 
 void DeskSpirite::keyReleaseEvent(QKeyEvent *event)
 {
-    if(event->key() == Qt::Key_Left || event->key() == Qt::Key_Right){
-        this->stateNum = State::idle;
-        this->velocity = 0;
-    }
+    if(event->isAutoRepeat()){return;}
+    updateKeyState(event);
 }
 
 void DeskSpirite::on_DeskSpirite_customContextMenuRequested(const QPoint &pos)
@@ -166,17 +226,21 @@ void DeskSpirite::on_DeskSpirite_customContextMenuRequested(const QPoint &pos)
     QMenu *pMenu = new QMenu(this);
     QAction *pClose = new QAction(tr("Close spirite"), this);
     QAction *pAttack = new QAction(tr("Attack"), this);
+    QAction *todo = new QAction(tr("Add todo"), this);
 
     pAttack->setData(1);
     pClose->setData(2);
+    todo->setData(3);
 
     //Add the action onto the menu
     pMenu->addAction(pAttack);
     pMenu->addAction(pClose);
+    pMenu->addAction(todo);
 
     //Connect the signal and slot
     connect(pClose, &QAction::triggered, this, &DeskSpirite::onTaskBoxContextMenuEvent);
     connect(pAttack, &QAction::triggered, this, &DeskSpirite::onTaskBoxContextMenuEvent);
+    connect(todo, &QAction::triggered, this, &DeskSpirite::onTaskBoxContextMenuEvent);
 
     //Display where the mouse clicked
     pMenu->exec(cursor().pos());

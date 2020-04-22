@@ -51,17 +51,24 @@ private:
     int ORIGIN_RIGHT_DOWN_2[2] = {138, 138};
 
     // The state of deskspirite
-    enum State{paused, idle, draging, drop, attack, runLeft, runRight};
-    int frameCount[7] = {10, 8, 1, 9, 9, 8, 8};    // Number of frames corresponding to the enum index
+    enum State{paused, idle, draging, drop, attack, runLeft, runRight, jumpLeft, jumpRight};
+    int frameCount[9] = {10, 8, 1, 9, 9, 8, 8, 9, 9};    // Number of frames corresponding to the enum index
     int stateNum;
+    bool isLeftPressed;
+    bool isRightPressed;
+    vector<int> keySequence;
+    enum keyState{LEFT_PRE, LEFT_REL, RIGHT_PRE, RIGHT_REL, UP_PRE, UP_REL, DOWN_PRE, DOWN_REL};
     int idleCount; //Used to transfer between idle and paused state (Always being idle is too annoying...)
 
     bool mousePress;
     QPoint movePoint;
 
     float curScreenPos[2] = {0,0};
-    int velocity = 0;
-    int VELOCITY_INTERVAL = 35;
+    int velocity_hor = 0;
+    int velocity_ver = 0;
+    int VELOCITY_INTERVAL_HOR = 35;
+    int VELOCITY_INTERVAL_VER = 6;
+    int INIT_VER_COEFFICIENT = 5;
 
     int updateId;
     int idleTimerId;
@@ -83,6 +90,7 @@ private:
     void mouseMoveEvent(QMouseEvent *event);
     void keyPressEvent(QKeyEvent *event);
     void keyReleaseEvent(QKeyEvent *event);
+    void updateKeyState(QKeyEvent *event);
 
     void onTaskBoxContextMenuEvent();
     void timerEvent(QTimerEvent *event);
