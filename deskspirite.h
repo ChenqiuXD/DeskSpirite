@@ -1,6 +1,8 @@
 #ifndef DESKSPIRITE_H
 #define DESKSPIRITE_H
 
+#include "todowindow.h"
+
 #include <stddef.h>
 #include <string.h>
 #include <iostream>
@@ -50,6 +52,10 @@ private:
     int ORIGIN_RIGHT_DOWN_1[2] = {106, 166};
     int ORIGIN_RIGHT_DOWN_2[2] = {138, 138};
 
+    // todoList constant
+    int TODOWIDTH = 480;
+    int TODOHEIGHT = 360;
+
     // The state of deskspirite
     enum State{paused, idle, draging, drop, attack, runLeft, runRight, jumpLeft, jumpRight};
     int frameCount[9] = {10, 8, 1, 9, 9, 8, 8, 9, 9};    // Number of frames corresponding to the enum index
@@ -82,7 +88,8 @@ private:
     QPixmap image;
     int iterState;  //Used to change states between idle and paused
 
-    Ui::DeskSpirite *ui;
+    Ui::DeskSpirite *ui;\
+    todoWindow* dialog;
 
     // Use the following three function to drag the spirite around
     void mousePressEvent(QMouseEvent *event);

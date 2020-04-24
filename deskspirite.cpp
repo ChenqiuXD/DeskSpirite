@@ -1,6 +1,5 @@
 #include "deskspirite.h"
 #include "ui_deskspirite.h"
-#include "ui_mainwindow.h"
 
 DeskSpirite::DeskSpirite(QWidget *parent) :
     QWidget(parent),
@@ -229,13 +228,13 @@ void DeskSpirite::on_DeskSpirite_customContextMenuRequested(const QPoint &pos)
     QAction *todo = new QAction(tr("Add todo"), this);
 
     pAttack->setData(1);
-    pClose->setData(2);
-    todo->setData(3);
+    todo->setData(2);
+    pClose->setData(3);
 
     //Add the action onto the menu
     pMenu->addAction(pAttack);
-    pMenu->addAction(pClose);
     pMenu->addAction(todo);
+    pMenu->addAction(pClose);
 
     //Connect the signal and slot
     connect(pClose, &QAction::triggered, this, &DeskSpirite::onTaskBoxContextMenuEvent);
@@ -263,6 +262,11 @@ void DeskSpirite::onTaskBoxContextMenuEvent()
         currentFrame = 0;
         break;
     case 2:
+        dialog = new todoWindow(this);
+        dialog->setGeometry(this->width()+width(), this->height()+height(), TODOWIDTH, TODOHEIGHT);
+        dialog->exec();
+        break;
+    case 3:
         QApplication::quit();
         break;
     default:

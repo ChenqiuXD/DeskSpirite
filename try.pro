@@ -14,9 +14,11 @@ TEMPLATE = app
 CONFIG += c++11
 
 SOURCES += main.cpp\
-        deskspirite.cpp
+        deskspirite.cpp \
+    todowindow.cpp
 
-HEADERS  += deskspirite.h
+HEADERS  += deskspirite.h \
+    todowindow.h
 
 FORMS    += deskspirite.ui \
-    mainwindow.ui
+    todowindow.ui
