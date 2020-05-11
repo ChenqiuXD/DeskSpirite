@@ -42,7 +42,7 @@ private slots:
 
 private:
     // Some frequent changeparameters:
-    int FPS_FREQ = 80;
+    int FPS_FREQ = 90;
     int SCREEN_WIDTH;
     int WIN_SIZE_WIDTH = 160;
     int WIN_SIZE_HEIGHT = 160;

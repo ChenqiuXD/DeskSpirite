@@ -5,13 +5,19 @@
 #include <QCloseEvent>
 #include <QList>
 #include <QString>
+#include <QDateTime>
+#include <QList>
+#include <QDebug>
 
 class memoitem{
 public:
     bool isDone;
     QString content;
-    QString beginTime;
-    QString endTime;
+    bool isPaused;
+    QDateTime pauseTime;
+    QDateTime beginTime;
+    QDateTime endTime;
+    int duration; // in second
     int row;
 };
 
@@ -41,11 +47,15 @@ private:
 private slots:
     void addList();
     void deleteList();
+    void on_pauseButton_clicked();
     void addButtonEnableFunc();
     void doneButtonEnableFunc();
     void saveBeforeExit();
     void dateShow();
+    void updateDuration(memoitem* item);
+    int secTomin(int sec);
     void cleanCookie();
+    void on_listWidget_clicked(const QModelIndex &index);
 };
 
 #endif // TODOWINDOW_H

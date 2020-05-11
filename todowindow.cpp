@@ -3,9 +3,7 @@
 
 #include <QFile>
 #include <QTextCodec>
-#include <QDateTime>
-#include <QList>
-#include <QDebug>
+#include <iostream>
 
 todoWindow::todoWindow(QWidget *parent) :
     QDialog(parent),
@@ -13,7 +11,7 @@ todoWindow::todoWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    QString str = "MM-dd hh:mm:ss ddd";
+    QString str = "MM-dd hh:mm:ss";
     ui->dateLabel->setText(str);
 
     connect(ui->addButton,SIGNAL(clicked()),this,SLOT(addList()));
@@ -34,11 +32,17 @@ void todoWindow::addList(){
     memoitem item;
     item.isDone=0;
 
+    if(ui->lineEdit->text()==""){
+        return;
+    }
     item.content = ui->lineEdit->text();
+    item.isPaused = false;
+    item.duration = 0;
+    item.pauseTime = QDateTime::currentDateTime();
 
     QDateTime time = QDateTime::currentDateTime();
-    QString str = time.toString("MM-dd hh:mm:ss ddd");
-    item.beginTime = str;
+    QString str = time.toString("MM-dd hh:mm:ss");
+    item.beginTime = time;
     item.row = -1;
 
     memoItem.append(item);
@@ -60,12 +64,32 @@ void todoWindow::deleteList(){
     int index = findMemoItemIndex(content,ui->listWidget->currentRow());
     memoItem[index].isDone=1;
     QDateTime time = QDateTime::currentDateTime();
-    QString str = time.toString("yyyy-MM-dd hh:mm:ss ddd");
-    memoItem[index].endTime = str;
+    QString str = time.toString("MM-dd hh:mm:ss");
+    memoItem[index].endTime = time;
 
     //listWidget->takeItem(listWidget->currentRow());
     showTodo();
     showDone();
+}
+
+void todoWindow::on_pauseButton_clicked()
+{
+    if(ui->listWidget->currentItem()==NULL){
+        return;
+    }
+
+    QString content = ui->listWidget->currentItem()->text();
+    int index = findMemoItemIndex(content,ui->listWidget->currentRow());
+    if(memoItem[index].isPaused==false){
+        updateDuration(&memoItem[index]);
+        memoItem[index].isPaused = true;
+        QDateTime time = QDateTime::currentDateTime();
+        memoItem[index].pauseTime = time;
+        ui->pauseButton->setText("continue");
+    }else{
+        memoItem[index].isPaused = false;
+        ui->pauseButton->setText("pause");
+    }
 }
 
 void todoWindow::addButtonEnableFunc(){
@@ -105,11 +129,13 @@ void todoWindow::initToDoList(){
         line = in.readLine();
         item.content = line;
         line = in.readLine();
-        item.beginTime = line;
+        QDateTime time = QDateTime::fromString(line, "MM-dd hh:mm:ss");
+        item.beginTime = time;
 
         if (item.isDone==1){
             line = in.readLine();
-            item.endTime = line;
+            time = QDateTime::fromString(line, "MM-dd hh:mm:ss");
+            item.endTime = time;
         }
 
         memoItem.append(item);
@@ -130,9 +156,12 @@ void todoWindow::saveBeforeExit(){
     for (int i=0; i<memoItem.count(); i++){
         out<<memoItem[i].isDone<<endl;
         out<<memoItem[i].content<<endl;
-        out<<memoItem[i].beginTime<<endl;
+        QString str;
+        str = memoItem[i].beginTime.toString("MM-dd hh:mm:ss");
+        out<<str<<endl;
         if(memoItem[i].isDone==1)
-            out<<memoItem[i].endTime<<endl;
+            str = memoItem[i].endTime.toString("MM-dd hh:mm:ss");
+            out<<str<<endl;
     }
     out.flush();
     file.close();
@@ -144,8 +173,26 @@ void todoWindow::dateShow(){
         return ;
     }
     int index = findMemoItemIndex(ui->listWidget->currentItem()->text(),ui->listWidget->currentRow());
-    if (index>=0)
-        ui->dateLabel->setText(memoItem[index].beginTime);
+    if (index>=0){
+        ui->dateLabel->setText(memoItem[index].beginTime.toString("MM-dd hh:mm:ss"));
+        updateDuration(&memoItem[index]);
+        QString durStr(memoItem[index].duration);
+    }
+
+}
+
+void todoWindow::updateDuration(memoitem* item){
+    if(item->isPaused==true){return;}
+    else{
+        QDateTime time = QDateTime::currentDateTime();
+        item->duration += time.secsTo(item->pauseTime);
+    }
+}
+
+int todoWindow::secTomin(int sec){
+    int min;
+    min = sec/60;
+    return min;
 }
 
 inline int todoWindow::findMemoItemIndex(QString s,int row){
@@ -163,9 +210,9 @@ void todoWindow::showDone(){
         if (memoItem[i].isDone==1){
             QString temp = memoItem[i].content;
             temp += "   ";
-            temp += memoItem[i].beginTime;
+            temp += memoItem[i].beginTime.toString("MM-dd hh:mm:ss");
             temp += "--";
-            temp += memoItem[i].endTime;
+            temp += memoItem[i].endTime.toString("MM-dd hh:mm:ss");
             ui->doneList->addItem(temp);
         }
     }
@@ -185,6 +232,19 @@ void todoWindow::showTodo(){
 
 void todoWindow::closeEvent(QCloseEvent *event)
 {
+    saveBeforeExit();
     event->ignore();
     reject();
+}
+
+void todoWindow::on_listWidget_clicked(const QModelIndex &index)
+{
+    Q_UNUSED(index);
+    QString content = ui->listWidget->currentItem()->text();
+    int itemIndex = findMemoItemIndex(content,ui->listWidget->currentRow());
+    if(memoItem[itemIndex].isPaused){
+        ui->pauseButton->setText("continue");
+    }else{
+        ui->pauseButton->setText("pause");
+    }
 }
